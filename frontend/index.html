@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Notes App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 2rem; }
+    h1 { color: #1a1a2e; margin-bottom: 1.5rem; }
+    .card { background: white; padding: 1.5rem; border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    input, textarea { width: 100%; padding: 0.6rem; margin: 0.4rem 0 0.8rem;
+                      border: 1px solid #ddd; border-radius: 6px; font-size: 1rem; }
+    button { background: #4361ee; color: white; border: none; padding: 0.6rem 1.4rem;
+             border-radius: 6px; cursor: pointer; font-size: 1rem; }
+    button:hover { background: #3a0ca3; }
+    .note { background: white; padding: 1rem 1.2rem; border-radius: 8px;
+            margin-bottom: 0.8rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            display: flex; justify-content: space-between; align-items: flex-start; }
+    .note-content h3 { color: #1a1a2e; } 
+    .note-content p { color: #555; margin-top: 0.3rem; font-size: 0.9rem; }
+    .note-content small { color: #aaa; font-size: 0.75rem; }
+    .del-btn { background: #ef233c; padding: 0.3rem 0.8rem; font-size: 0.8rem; }
+    .del-btn:hover { background: #b5111e; }
+    #status { color: green; font-size: 0.85rem; margin-top: 0.5rem; min-height: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>📝 Notes App</h1>
+
+  <div class="card">
+    <h2>Add a Note</h2>
+    <input id="title" type="text" placeholder="Title" />
+    <textarea id="content" rows="3" placeholder="Content (optional)"></textarea>
+    <button onclick="addNote()">Add Note</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="notes-list"></div>
+
+  <script>
+    const API = "http://localhost:5000";
+
+    async function loadNotes() {
+      const res = await fetch(`${API}/notes`);
+      const notes = await res.json();
+      const container = document.getElementById("notes-list");
+      container.innerHTML = notes.length === 0
+        ? "<p style='color:#aaa'>No notes yet. Add one!</p>"
+        : notes.map(n => `
+            <div class="note">
+              <div class="note-content">
+                <h3>${n.title}</h3>
+                ${n.content ? `<p>${n.content}</p>` : ""}
+                <small>${new Date(n.created_at).toLocaleString()}</small>
+              </div>
+              <button class="del-btn" onclick="deleteNote(${n.id})">Delete</button>
+            </div>`).join("");
+    }
+
+    async function addNote() {
+      const title = document.getElementById("title").value.trim();
+      const content = document.getElementById("content").value.trim();
+      const status = document.getElementById("status");
+      if (!title) { status.style.color = "red"; status.textContent = "Title is required!"; return; }
+      await fetch(`${API}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content })
+      });
+      document.getElementById("title").value = "";
+      document.getElementById("content").value = "";
+      status.style.color = "green";
+      status.textContent = "Note added!";
+      setTimeout(() => status.textContent = "", 2000);
+      loadNotes();
+    }
+
+    async function deleteNote(id) {
+      await fetch(`${API}/notes/${id}`, { method: "DELETE" });
+      loadNotes();
+    }
+
+    loadNotes();
+  </script>
+</body>
+</html>
